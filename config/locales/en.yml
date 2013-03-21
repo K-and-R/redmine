@@ -254,6 +254,7 @@ en:
   field_due_date: Due date
   field_assigned_to: Assignee
   field_priority: Priority
+  field_found_in_version: Discovered in version
   field_fixed_version: Target version
   field_user: User
   field_principal: Principal
@@ -896,6 +897,7 @@ en:
   label_attribute_of_author: "Author's %{name}"
   label_attribute_of_assigned_to: "Assignee's %{name}"
   label_attribute_of_user: "User's %{name}"
+  label_attribute_of_found_in_version: "Discovered in version's %{name}"
   label_attribute_of_fixed_version: "Target version's %{name}"
   label_cross_project_descendants: With subprojects
   label_cross_project_tree: With project tree

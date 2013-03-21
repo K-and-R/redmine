@@ -19,6 +19,7 @@ class Version < ActiveRecord::Base
   include Redmine::SafeAttributes
   after_update :update_issues_from_sharing_change
   belongs_to :project
+  has_many :found_in_issues, :class_name => 'Issue', :foreign_key => 'found_in_version_id', :dependent => :nullify
   has_many :fixed_issues, :class_name => 'Issue', :foreign_key => 'fixed_version_id', :dependent => :nullify
   acts_as_customizable
   acts_as_attachable :view_permission => :view_files,

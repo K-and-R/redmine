@@ -59,6 +59,20 @@
   </li>
   <% end %>
 
+  <% if @safe_attributes.include?('found_in_version_id') && @versions.present? -%>
+  <li class="folder">
+    <a href="#" class="submenu"><%= l(:field_found_in_version) %></a>
+    <ul>
+    <% @versions.sort.each do |v| -%>
+        <li><%= context_menu_link format_version_name(v), bulk_update_issues_path(:ids => @issue_ids, :issue => {'found_in_version_id' => v}, :back_url => @back), :method => :post,
+                                  :selected => (@issue && v == @issue.found_in_version), :disabled => !@can[:update] %></li>
+    <% end -%>
+        <li><%= context_menu_link l(:label_none), bulk_update_issues_path(:ids => @issue_ids, :issue => {'found_in_version_id' => 'none'}, :back_url => @back), :method => :post,
+                                  :selected => (@issue && @issue.found_in_version.nil?), :disabled => !@can[:update] %></li>
+    </ul>
+  </li>
+  <% end %>
+
   <% if @safe_attributes.include?('assigned_to_id') && @assignables.present? -%>
   <li class="folder">
     <a href="#" class="submenu"><%= l(:field_assigned_to) %></a>

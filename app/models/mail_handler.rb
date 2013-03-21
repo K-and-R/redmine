@@ -370,6 +370,8 @@ class MailHandler < ActionMailer::Base
       'priority_id' => (k = get_keyword(:priority)) && IssuePriority.named(k).first.try(:id),
       'category_id' => (k = get_keyword(:category)) && issue.project.issue_categories.named(k).first.try(:id),
       'assigned_to_id' => assigned_to.try(:id),
+      'found_in_version_id' => (k = get_keyword(:found_in_version, :override => true)) &&
+                                issue.project.shared_versions.named(k).first.try(:id),
       'fixed_version_id' => (k = get_keyword(:fixed_version, :override => true)) &&
                                 issue.project.shared_versions.named(k).first.try(:id),
       'start_date' => get_keyword(:start_date, :override => true, :format => '\d{4}-\d{2}-\d{2}'),

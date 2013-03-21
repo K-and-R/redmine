@@ -303,7 +303,7 @@ module IssuesHelper
         old_value = format_date(detail.old_value.to_date) if detail.old_value
 
       when 'project_id', 'status_id', 'tracker_id', 'assigned_to_id',
-            'priority_id', 'category_id', 'fixed_version_id'
+            'priority_id', 'category_id', 'found_in_version_id', 'fixed_version_id'
         value = find_name_by_reflection(field, detail.value)
         old_value = find_name_by_reflection(field, detail.old_value)
 

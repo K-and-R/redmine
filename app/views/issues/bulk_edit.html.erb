@@ -81,6 +81,15 @@
 </p>
 <% end %>
 
+<% if @safe_attributes.include?('found_in_version_id') -%>
+<p>
+  <label for='issue_found_in_version_id'><%= l(:field_found_in_version) %></label>
+  <%= select_tag('issue[found_in_version_id]', content_tag('option', l(:label_no_change_option), :value => '') +
+                                   content_tag('option', l(:label_none), :value => 'none') +
+                                   version_options_for_select(@versions.sort)) %>
+</p>
+<% end %>
+
 <% if @safe_attributes.include?('fixed_version_id') -%>
 <p>
   <label for='issue_fixed_version_id'><%= l(:field_fixed_version) %></label>

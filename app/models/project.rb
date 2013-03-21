@@ -330,7 +330,7 @@ class Project < ActiveRecord::Base
       Issue.
         includes(:project).
         where("#{Project.table_name}.lft < ? OR #{Project.table_name}.rgt > ?", lft, rgt).
-        where("#{Issue.table_name}.fixed_version_id IN (?)", v_ids).
+        where("#{Issue.table_name}.found_in_version_id IN (?) OR #{Issue.table_name}.fixed_version_id IN (?)", v_ids, v_ids).
         exists?
       return false
     end
@@ -566,6 +566,7 @@ class Project < ActiveRecord::Base
     @start_date ||= [
      issues.minimum('start_date'),
      shared_versions.minimum('effective_date'),
+     Issue.found_in_version(shared_versions).minimum('start_date'),
      Issue.fixed_version(shared_versions).minimum('start_date')
     ].compact.min
   end
@@ -575,6 +576,7 @@ class Project < ActiveRecord::Base
     @due_date ||= [
      issues.maximum('due_date'),
      shared_versions.maximum('effective_date'),
+     Issue.found_in_version(shared_versions).maximum('due_date'),
      Issue.fixed_version(shared_versions).maximum('due_date')
     ].compact.max
   end
@@ -865,6 +867,10 @@ class Project < ActiveRecord::Base
       # Changing project resets the custom field values
       # TODO: handle this in Issue#project=
       new_issue.custom_field_values = issue.custom_field_values.inject({}) {|h,v| h[v.custom_field_id] = v.value; h}
+      # Reassign found_in_versions by name, since names are unique per project
+      if issue.found_in_version && issue.found_in_version.project == project
+        new_issue.found_in_version = self.versions.detect {|v| v.name == issue.found_in_version.name}
+      end
       # Reassign fixed_versions by name, since names are unique per project
       if issue.fixed_version && issue.fixed_version.project == project
         new_issue.fixed_version = self.versions.detect {|v| v.name == issue.fixed_version.name}

@@ -42,6 +42,9 @@
   unless @issue.disabled_core_fields.include?('category_id')
     rows.left l(:field_category), h(@issue.category ? @issue.category.name : "-"), :class => 'category'
   end
+  unless @issue.disabled_core_fields.include?('found_in_version_id')
+    rows.left l(:field_found_in_version), (@issue.found_in_version ? link_to_version(@issue.found_in_version) : "-"), :class => 'found-in-version'
+  end
   unless @issue.disabled_core_fields.include?('fixed_version_id')
     rows.left l(:field_fixed_version), (@issue.fixed_version ? link_to_version(@issue.fixed_version) : "-"), :class => 'fixed-version'
   end

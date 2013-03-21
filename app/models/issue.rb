@@ -25,6 +25,7 @@ class Issue < ActiveRecord::Base
   belongs_to :status, :class_name => 'IssueStatus', :foreign_key => 'status_id'
   belongs_to :author, :class_name => 'User', :foreign_key => 'author_id'
   belongs_to :assigned_to, :class_name => 'Principal', :foreign_key => 'assigned_to_id'
+  belongs_to :found_in_version, :class_name => 'Version', :foreign_key => 'found_in_version_id'
   belongs_to :fixed_version, :class_name => 'Version', :foreign_key => 'fixed_version_id'
   belongs_to :priority, :class_name => 'IssuePriority', :foreign_key => 'priority_id'
   belongs_to :category, :class_name => 'IssueCategory', :foreign_key => 'category_id'
@@ -89,6 +90,10 @@ class Issue < ActiveRecord::Base
   scope :fixed_version, lambda {|versions|
     ids = [versions].flatten.compact.map {|v| v.is_a?(Version) ? v.id : v}
     ids.any? ? where(:fixed_version_id => ids) : where('1=0')
+  }
+  scope :found_in_version, lambda {|versions|
+    ids = [versions].flatten.compact.map {|v| v.is_a?(Version) ? v.id : v}
+    ids.any? ? where(:found_in_version_id => ids) : where('1=0')
   }
 
   before_create :default_assign
@@ -288,6 +293,11 @@ class Issue < ActiveRecord::Base
     write_attribute(:fixed_version_id, vid)
   end
 
+  def found_in_version_id=(vid)
+    self.found_in_version = nil
+    write_attribute(:found_in_version_id, vid)
+  end
+
   def tracker_id=(tid)
     self.tracker = nil
     result = write_attribute(:tracker_id, tid)
@@ -319,6 +329,10 @@ class Issue < ActiveRecord::Base
       # Keep the fixed_version if it's still valid in the new_project
       if fixed_version && fixed_version.project != project && !project.shared_versions.include?(fixed_version)
         self.fixed_version = nil
+      end
+      # Keep the found_in_version if it's still valid in the new_project
+      if found_in_version && found_in_version.project != project && !project.shared_versions.include?(found_in_version)
+        self.found_in_version = nil
       end
       # Clear the parent task if it's no longer valid
       unless valid_parent_project?
@@ -370,6 +384,7 @@ class Issue < ActiveRecord::Base
     'assigned_to_id',
     'priority_id',
     'fixed_version_id',
+    'found_in_version_id',
     'subject',
     'description',
     'start_date',
@@ -385,6 +400,7 @@ class Issue < ActiveRecord::Base
   safe_attributes 'status_id',
     'assigned_to_id',
     'fixed_version_id',
+    'found_in_version_id',
     'done_ratio',
     'lock_version',
     'notes',
@@ -584,6 +600,14 @@ class Issue < ActiveRecord::Base
       end
     end
 
+    if found_in_version
+      if !assignable_versions.include?(found_in_version)
+        errors.add :found_in_version_id, :inclusion
+      elsif reopened? && found_in_version.closed?
+        errors.add :base, I18n.t(:error_can_not_reopen_issue_on_closed_version)
+      end
+    end
+
     # Checks that the issue can not be added/moved to a disabled tracker
     if project && (tracker_id_changed? || project_id_changed?)
       unless project.trackers.include?(tracker)
@@ -743,6 +767,17 @@ class Issue < ActiveRecord::Base
         end
       else
         versions << fixed_version
+      end
+    end
+    if found_in_version
+      if found_in_version_id_changed?
+        # nothing to do
+      elsif project_id_changed?
+        if project.shared_versions.include?(found_in_version)
+          versions << found_in_version
+        end
+      else
+        versions << found_in_version
       end
     end
     @assignable_versions = versions.uniq.sort
@@ -1105,6 +1140,7 @@ class Issue < ActiveRecord::Base
   def self.update_versions_from_sharing_change(version)
     # Update issues assigned to the version
     update_versions(["#{Issue.table_name}.fixed_version_id = ?", version.id])
+    update_versions(["#{Issue.table_name}.found_in_version_id = ?", version.id])
   end
 
   # Unassigns issues from versions that are no longer shared
@@ -1395,6 +1431,21 @@ class Issue < ActiveRecord::Base
       unless issue.project.shared_versions.include?(issue.fixed_version)
         issue.init_journal(User.current)
         issue.fixed_version = nil
+        issue.save
+      end
+    end
+    # Only need to update issues with a found_in_version from
+    # a different project and that is not systemwide shared
+    Issue.scoped(:conditions => conditions).all(
+      :conditions => "#{Issue.table_name}.found_in_version_id IS NOT NULL" +
+        " AND #{Issue.table_name}.project_id <> #{Version.table_name}.project_id" +
+        " AND #{Version.table_name}.sharing <> 'system'",
+      :include => [:project, :found_in_version]
+    ).each do |issue|
+      next if issue.project.nil? || issue.found_in_version.nil?
+      unless issue.project.shared_versions.include?(issue.found_in_version)
+        issue.init_journal(User.current)
+        issue.found_in_version = nil
         issue.save
       end
     end

@@ -31,6 +31,7 @@ class IssueQuery < Query
     QueryColumn.new(:assigned_to, :sortable => lambda {User.fields_for_order_statement}, :groupable => true),
     QueryColumn.new(:updated_on, :sortable => "#{Issue.table_name}.updated_on", :default_order => 'desc'),
     QueryColumn.new(:category, :sortable => "#{IssueCategory.table_name}.name", :groupable => true),
+    QueryColumn.new(:found_in_version, :sortable => lambda {Version.fields_for_order_statement}, :groupable => true),
     QueryColumn.new(:fixed_version, :sortable => lambda {Version.fields_for_order_statement}, :groupable => true),
     QueryColumn.new(:start_date, :sortable => "#{Issue.table_name}.start_date"),
     QueryColumn.new(:due_date, :sortable => "#{Issue.table_name}.due_date"),
@@ -194,6 +195,9 @@ class IssueQuery < Query
     ) unless role_values.empty?
 
     if versions.any?
+      add_available_filter "found_in_version_id",
+        :type => :list_optional,
+        :values => versions.sort.collect{|s| ["#{s.project.name} - #{s.name}", s.id.to_s] }
       add_available_filter "fixed_version_id",
         :type => :list_optional,
         :values => versions.sort.collect{|s| ["#{s.project.name} - #{s.name}", s.id.to_s] }
@@ -234,7 +238,7 @@ class IssueQuery < Query
 
     add_custom_fields_filters(issue_custom_fields)
 
-    add_associations_custom_fields_filters :project, :author, :assigned_to, :fixed_version
+    add_associations_custom_fields_filters :project, :author, :assigned_to, :found_in_version, :fixed_version
 
     IssueRelation::TYPES.each do |relation_type, options|
       add_available_filter relation_type, :type => :relation, :label => options[:name]
